@@ -1,0 +1,16 @@
+{
+  "name": "contract-filler",
+  "version": "1.0.0",
+  "description": "App that fills contracts with your data on contract every month so you just need to sign them.",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Stanislaw Jarocki",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "libreoffice-convert": "^1.5.1"
+  }
+}
