@@ -67,13 +67,15 @@ const getEnvValues = () => {
 const getArgsValues = (values) => {
     const args = process.argv.slice(2);
 
-    args.reduce((acc, arg) => {
+    const argsValues = args.reduce((acc, arg) => {
         const [key, value] = arg.split('=');
         return {
             ...acc,
             [key]: value
         };
     }, values);
+
+    return argsValues;
 }
 
 const getConfirmation = (inputPaths, values) => {
