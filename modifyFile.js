@@ -3,37 +3,56 @@ const fs = require('fs');
 const path = require('path');
 const PizZip = require("pizzip");
 const libre = require('libreoffice-convert');
+const pdfMerge = require('easy-pdf-merge');
 libre.convertAsync = require('util').promisify(libre.convert);
 const removeDiacritics = require('diacritics').remove;
+const fsPromises = require('fs').promises;
 
 const saveFiles = (docs, targetType) => {
-    docs.forEach(({ doc, outputPath }) => {
-        const normalizedOutputPath = removeDiacritics(outputPath)
+    const promises = docs.map(({ doc, outputPath }) => {
+        return new Promise(async (resolve, reject) => {
+            console.log('Saving file: ', outputPath);
+            const normalizedOutputPath = removeDiacritics(outputPath)
 
-        const buf = doc.getZip().generate({
-            type: "nodebuffer",
-            compression: "DEFLATE",
+            const buf = doc.getZip().generate({
+                type: "nodebuffer",
+                compression: "DEFLATE",
+            });
+
+            try {
+                await fsPromises.writeFile(path.resolve(__dirname, `${normalizedOutputPath}.docx`), buf);
+
+                if (targetType === 'pdf') {
+                    try {
+                        await convertToPdf(normalizedOutputPath + '.docx', outputPath + '.pdf');
+                        console.log('PDF saved: ', `${outputPath}.pdf`);
+                        await fsPromises.unlink(path.resolve(__dirname, `${normalizedOutputPath}.docx`));
+                    } catch (err) {
+                        console.log(`Error while converting file: ${err}`);
+                    }
+                } else if (targetType === 'docx') {
+                    console.log('DOCX saved: ', `${normalizedOutputPath}.docx`);
+                } else {
+                    console.log("Unsupported file type. Supported types are: pdf, docx. Specify them in .env file e.g. TARGET_TYPE='pdf'");
+                }
+                resolve();
+            } catch (err) {
+                console.log('Error while saving file: ', err);
+                reject(err);
+            }
         });
-
-        fs.writeFileSync(path.resolve(__dirname, `${normalizedOutputPath}.docx`), buf);
-
-        if (targetType === 'pdf') {
-            convertToPdf(normalizedOutputPath + '.docx', outputPath + '.pdf')
-                .catch(function (err) {
-                    console.log(`Error while converting file: ${err}`);
-                })
-                .then(() => {
-                    console.log('PDF saved: ', `${outputPath}.pdf`)
-                    fs.unlinkSync(path.resolve(__dirname, `${normalizedOutputPath}.docx`));
-                })
-        } else if (targetType === 'docx') {
-            console.log('DOCX saved: ', `${normalizedOutputPath}.docx`)
-        } else {
-            console.log("Unsupported file type. Supported types are: pdf, docx. Specyfiy them in .env file e.g. TARGET_TYPE='pdf'")
-        }
     });
+    return promises;
 }
 
+const mergePdfs = (filePaths) => {
+    pdfMerge(filePaths, './certificates/all-certificates.pdf', function (err) {
+        if (err)
+            return console.log(err);
+
+        console.log('Successfully merged documents into one, easy to print ./certificates/all-certificates.pdf');
+    });
+}
 
 const getFilledDocs = (inputPaths, values) => {
     const filledDocs = inputPaths.map((inputPath) => {
@@ -74,7 +93,39 @@ async function convertToPdf(inputPath, outputPath) {
     fs.writeFileSync(outputPath, pdfBuf);
 }
 
+const getFilledPages = (inputPath, names) => {
+    const originFilaName = inputPath.match(/.*_(.*)\.docx/)[1];
+
+    const content = fs.readFileSync(
+        path.resolve(inputPath),
+        "binary"
+    );
+
+    const filledDocs = names.map((name) => {
+        const [firstName, lastName] = name.split(' ');
+        const outputPath = `./certificates/${originFilaName}_${firstName}_${lastName}`;
+
+        const zip = new PizZip(content);
+
+        const doc = new Docxtemplater(zip, {
+            paragraphLoop: true,
+            linebreaks: true,
+        });
+
+        doc.render({ firstName, lastName });
+
+        return {
+            doc,
+            outputPath,
+        };
+    });
+
+    return filledDocs;
+}
+
 module.exports = {
     saveFiles,
-    getFilledDocs
+    getFilledDocs,
+    getFilledPages,
+    mergePdfs
 };

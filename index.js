@@ -1,6 +1,6 @@
 const { getAllValues } = require('./values');
 const { getConfirmation } = require('./ui');
-const { getFilledDocs, saveFiles } = require('./modifyFile');
+const { getFilledDocs, saveFiles, getFilledPages, mergePdfs } = require('./modifyFile');
 
 const main = () => {
     const values = getAllValues();
@@ -10,13 +10,25 @@ const main = () => {
         return;
     }
     const inputPaths = templatePaths.split(',');
-    const shouldContinue = getConfirmation(inputPaths, values);
+    // const shouldContinue = getConfirmation(inputPaths, values);
 
-    if (!shouldContinue) {
-        return;
-    }
-    const filledDocs = getFilledDocs(inputPaths, values);
-    saveFiles(filledDocs, values.targetType);
+    // if (!shouldContinue) {
+    //     return;
+    // }
+    // const filledDocs = getFilledDocs(inputPaths, values);
+    // saveFiles(filledDocs, values.targetType);
+
+    // -------------- certs -------------
+    const names = values.names.split(',');
+    const filledCerts = getFilledPages(values.certTemplatePath, names)
+    const promises = saveFiles(filledCerts, values.targetType)
+
+    Promise.all(promises)
+        .then(() => {
+            const filesToMergePaths = filledCerts.map(({ outputPath }) => outputPath + '.pdf');
+            mergePdfs(filesToMergePaths);
+        })
+        .catch((err) => console.log('err', err));
 }
 
 main();
