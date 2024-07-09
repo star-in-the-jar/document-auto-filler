@@ -30,6 +30,7 @@ const getAllValues = () => {
 const getEnvValues = () => {
     const env = fs.readFileSync(path.resolve('.env'), 'utf8').split('\n')
     const envValues = env.reduce((acc, line, idx) => {
+        if (line === '' || (line && line[0] === '#')) return acc;
         const [key, value] = line.split('=')
         const formattedKey = getCamelCase(key, '_');
         const rawValue = value.replace(/['"]/g, '');
