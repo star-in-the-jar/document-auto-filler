@@ -11,6 +11,11 @@ const getCamelCase = (text, separator) => {
     return camelCase;
 }
 
+const MERGED_DIR = '.\\merged';
+const MERGED_SUFFIX = '_merged';
+
 module.exports = {
-    getCamelCase
+    getCamelCase,
+    MERGED_DIR,
+    MERGED_SUFFIX,
 }
